@@ -1,0 +1,32 @@
+name: Ping IP Address
+
+on:
+  push:
+    branches: [ main ]            # وقتی push به main اتفاق می‌افتد اجرا می‌شود
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest       # یا self‑hosted: ["self-hosted", "linux"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ping target IP
+        id: ping
+        run: |
+          # آدرس IP را می‌توان از یک متغیر محیطی یا hardcode کرد
+          IP="94.183.176.4"
+          
+          # 4 بسته را می‌فرستیم
+          echo "Pinging $IP ..."
+          ping -c 4 $IP
+          
+          # بررسی وضعیت خروجی
+          if [ $? -eq 0 ]; then
+            echo "Ping succeeded"
+          else
+            echo "Ping failed"
+            exit 1
+          fi
+        shell: bash
