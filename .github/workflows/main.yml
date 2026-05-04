@@ -1,24 +1,43 @@
-name: Ping 8.8.8.8
+name: Nginx Health‑Check
 
 on:
-  workflow_dispatch:          # می‌توانید آن را به‌صورت دستی نیز فراخوانی کنید
+  push:
+    branches: [ main ]          # یا می‌توانید از workflow_dispatch استفاده کنید
+  # workflow_dispatch:          # برای اجرای دستی
 
 jobs:
-  ping:
-    runs-on: ubuntu-latest
+  test-nginx:
+    runs-on: ubuntu-latest      # یا ["self-hosted", "linux"]
+    env:
+      SERVER_IP: 94.183.176.4      # آدرس IP سرور nginx (یا localhost اگر روی همان runner است)
 
     steps:
-      - name: Ping target IP
+      # 1️⃣ منتظر می‌ماند تا nginx آماده شود
+      - name: Wait for Nginx to be ready
         run: |
-          IP="8.8.8.8"
-          echo "Pinging $IP ..."
-          ping -c 4 $IP
-          EXIT_CODE=$?
-          echo "Ping exit code: $EXIT_CODE"
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "Ping failed"
+          echo "Waiting for nginx on $SERVER_IP:80 ..."
+          # سعی می‌کنیم تا 30 ثانیه بپیچیم، اگر از قبل nginx در دسترس نیست
+          for i in {1..30}; do
+            if curl -s --head http://$SERVER_IP | grep -q "200 OK"; then
+              echo "Nginx is up!"
+              exit 0
+            fi
+            echo -n "."
+            sleep 1
+          done
+          echo "Nginx did not respond after 30 seconds."
+          exit 1
+        shell: bash
+
+      # 2️⃣ بررسی صفحه‌ی اصلی
+      - name: Check root page
+        run: |
+          echo "Fetching root page from $SERVER_IP ..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://$SERVER_IP)
+          echo "HTTP status: $RESPONSE"
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "❌ Expected 200, but got $RESPONSE"
             exit 1
-          else
-            echo "Ping succeeded"
           fi
+          echo "✅ Nginx returned 200 OK."
         shell: bash
