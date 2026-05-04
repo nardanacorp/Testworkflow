@@ -16,6 +16,9 @@ jobs:
       - name: Wait for Nginx to be ready
         run: |
           echo "Waiting for nginx on $SERVER_IP:80 ..."
-          curl -s $SERVER_IP
+          if curl -s --head http://$SERVER_IP | grep -q "200 OK"; then
+              echo "Nginx is up!"
+              exit 0
+          fi
           exit 1
         shell: bash
